@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:casppa/app/core/errors/exceptions.dart';
+import 'package:casppa/app/core/utils/app_logger.dart';
 import 'package:casppa/app/domain/notifications/entities/notification_entity.dart';
 
 abstract class NotificationsRemoteDataSource {
@@ -23,12 +24,15 @@ abstract class NotificationsRemoteDataSource {
 class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource {
   const NotificationsRemoteDataSourceImpl(this._client);
 
+  static const _tag = 'NotificationsRemoteDataSource';
+
   final SupabaseClient _client;
 
   String get _currentUserId => _client.auth.currentUser!.id;
 
   @override
   Future<List<NotificationEntity>> getNotifications() async {
+    AppLogger.request(_tag, 'getNotifications', {'userId': _currentUserId});
     try {
       final rows = await _client
           .from('notifications')
@@ -36,8 +40,11 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
           .eq('user_id', _currentUserId)
           .order('created_at', ascending: false);
 
-      return rows.map(_fromRow).toList();
+      final result = rows.map(_fromRow).toList();
+      AppLogger.response(_tag, 'getNotifications', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getNotifications', error);
       throw ServerException(error.toString());
     }
   }
@@ -57,40 +64,50 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
 
   @override
   Future<void> markAsRead(String id) async {
+    AppLogger.request(_tag, 'markAsRead', {'id': id});
     try {
       await _client
           .from('notifications')
           .update({'is_read': true})
           .eq('id', id);
+      AppLogger.response(_tag, 'markAsRead');
     } catch (error) {
+      AppLogger.error(_tag, 'markAsRead', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> markAllAsRead() async {
+    AppLogger.request(_tag, 'markAllAsRead', {'userId': _currentUserId});
     try {
       await _client
           .from('notifications')
           .update({'is_read': true})
           .eq('user_id', _currentUserId)
           .eq('is_read', false);
+      AppLogger.response(_tag, 'markAllAsRead');
     } catch (error) {
+      AppLogger.error(_tag, 'markAllAsRead', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> deleteNotification(String id) async {
+    AppLogger.request(_tag, 'deleteNotification', {'id': id});
     try {
       await _client.from('notifications').delete().eq('id', id);
+      AppLogger.response(_tag, 'deleteNotification');
     } catch (error) {
+      AppLogger.error(_tag, 'deleteNotification', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Stream<NotificationEntity> watchNewNotifications(String userId) {
+    AppLogger.request(_tag, 'watchNewNotifications', {'userId': userId});
     final controller = StreamController<NotificationEntity>();
 
     final channel = _client
@@ -106,12 +123,15 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
           ),
           callback: (payload) {
             if (controller.isClosed) return;
-            controller.add(_fromRow(payload.newRecord));
+            final notification = _fromRow(payload.newRecord);
+            AppLogger.response(_tag, 'watchNewNotifications', notification.id);
+            controller.add(notification);
           },
         )
         .subscribe();
 
     controller.onCancel = () {
+      AppLogger.state(_tag, 'watchNewNotifications: cancelled for $userId');
       unawaited(_client.removeChannel(channel));
     };
 

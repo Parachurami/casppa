@@ -33,24 +33,21 @@ class NotificationsPage extends ConsumerWidget {
           await ref.read(notificationsProvider.future);
         },
         child: notificationsState.when(
-          loading: () => ShimmerList(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            separatorHeight: 12,
-            itemBuilder: (context, index) =>
-                const SkeletonBox(width: double.infinity, height: 88, borderRadius: 16),
-          ),
-          error: (error, _) => ListView(
-            children: [
-              const SizedBox(height: 80),
-              AssessmentsEmptyState(
-                icon: Icons.cloud_off_outlined,
-                title: 'Could not load notifications',
-                message: 'Check your connection and try again.',
-                ctaLabel: 'Retry',
-                onPressed: () => ref.invalidate(notificationsProvider),
-              ),
-            ],
-          ),
+          loading: () => _loadingContent,
+          error: (error, _) => notificationsState.isLoading
+              ? _loadingContent
+              : ListView(
+                  children: [
+                    const SizedBox(height: 80),
+                    AssessmentsEmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'Could not load notifications',
+                      message: 'Check your connection and try again.',
+                      ctaLabel: 'Retry',
+                      onPressed: () => ref.invalidate(notificationsProvider),
+                    ),
+                  ],
+                ),
           data: (notifications) {
             if (notifications.isEmpty) {
               return ListView(
@@ -107,4 +104,11 @@ class NotificationsPage extends ConsumerWidget {
       ),
     );
   }
+
+  Widget get _loadingContent => ShimmerList(
+    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+    separatorHeight: 12,
+    itemBuilder: (context, index) =>
+        const SkeletonBox(width: double.infinity, height: 88, borderRadius: 16),
+  );
 }

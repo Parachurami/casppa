@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:casppa/app/core/errors/exceptions.dart';
+import 'package:casppa/app/core/utils/app_logger.dart';
 import 'package:casppa/app/data/assignments/models/assignment_model.dart';
 import 'package:casppa/app/data/assignments/models/class_option_model.dart';
 import 'package:casppa/app/data/assignments/models/subject_option_model.dart';
@@ -54,10 +55,13 @@ abstract class AdminRemoteDataSource {
 class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
   const AdminRemoteDataSourceImpl(this._client);
 
+  static const _tag = 'AdminRemoteDataSource';
+
   final SupabaseClient _client;
 
   @override
   Future<AdminOverviewEntity> getOverview() async {
+    AppLogger.request(_tag, 'getOverview');
     try {
       final subjectRows = await _client.from('subjects').select('id');
       final classRows = await _client.from('classes').select('id');
@@ -70,59 +74,79 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
           .select('id')
           .eq('role', 'teacher');
 
-      return AdminOverviewEntity(
+      final result = AdminOverviewEntity(
         subjectCount: subjectRows.length,
         classCount: classRows.length,
         studentCount: studentRows.length,
         teacherCount: teacherRows.length,
       );
+      AppLogger.response(_tag, 'getOverview', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getOverview', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<SubjectOptionModel>> getSubjects() async {
+    AppLogger.request(_tag, 'getSubjects');
     try {
       final rows = await _client.from('subjects').select().order('title');
-      return rows.map(SubjectOptionModel.fromJson).toList();
+      final result = rows.map(SubjectOptionModel.fromJson).toList();
+      AppLogger.response(_tag, 'getSubjects', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getSubjects', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> createSubject(String title) async {
+    AppLogger.request(_tag, 'createSubject', {'title': title});
     try {
       await _client.from('subjects').insert({'title': title});
+      AppLogger.response(_tag, 'createSubject');
     } catch (error) {
+      AppLogger.error(_tag, 'createSubject', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> updateSubject(({String id, String title}) params) async {
+    AppLogger.request(_tag, 'updateSubject', {
+      'id': params.id,
+      'title': params.title,
+    });
     try {
       await _client
           .from('subjects')
           .update({'title': params.title})
           .eq('id', params.id);
+      AppLogger.response(_tag, 'updateSubject');
     } catch (error) {
+      AppLogger.error(_tag, 'updateSubject', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> deleteSubject(String id) async {
+    AppLogger.request(_tag, 'deleteSubject', {'id': id});
     try {
       await _client.from('subjects').delete().eq('id', id);
+      AppLogger.response(_tag, 'deleteSubject');
     } catch (error) {
+      AppLogger.error(_tag, 'deleteSubject', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<AdminClassEntity>> getClasses() async {
+    AppLogger.request(_tag, 'getClasses');
     try {
       final classRows = await _client
           .from('classes')
@@ -132,7 +156,7 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
       final classIds = classRows.map((row) => row['id'] as String).toList();
       final studentCounts = await _classStudentCounts(classIds);
 
-      return classRows.map((row) {
+      final result = classRows.map((row) {
         final teacher = row['teacher'] as Map<String, dynamic>?;
         final id = row['id'] as String;
 
@@ -144,7 +168,10 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
           studentCount: studentCounts[id] ?? 0,
         );
       }).toList();
+      AppLogger.response(_tag, 'getClasses', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getClasses', error);
       throw ServerException(error.toString());
     }
   }
@@ -167,6 +194,7 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
 
   @override
   Future<AdminClassDetailEntity> getClassDetail(String classId) async {
+    AppLogger.request(_tag, 'getClassDetail', {'classId': classId});
     try {
       final classRow = await _client
           .from('classes')
@@ -191,26 +219,35 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
             }).toList()
             ..sort((a, b) => a.name.compareTo(b.name));
 
-      return AdminClassDetailEntity(
+      final result = AdminClassDetailEntity(
         id: classRow['id'] as String,
         name: classRow['name'] as String,
         teacherId: classRow['teacher_id'] as String?,
         teacherName: teacher?['full_name'] as String?,
         students: students,
       );
+      AppLogger.response(_tag, 'getClassDetail', '${students.length} student(s)');
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getClassDetail', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> createClass(({String name, String? teacherId}) params) async {
+    AppLogger.request(_tag, 'createClass', {
+      'name': params.name,
+      'teacherId': params.teacherId,
+    });
     try {
       await _client.from('classes').insert({
         'name': params.name,
         'teacher_id': params.teacherId,
       });
+      AppLogger.response(_tag, 'createClass');
     } catch (error) {
+      AppLogger.error(_tag, 'createClass', error);
       throw ServerException(error.toString());
     }
   }
@@ -219,21 +256,31 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
   Future<void> updateClass(
     ({String id, String name, String? teacherId}) params,
   ) async {
+    AppLogger.request(_tag, 'updateClass', {
+      'id': params.id,
+      'name': params.name,
+      'teacherId': params.teacherId,
+    });
     try {
       await _client
           .from('classes')
           .update({'name': params.name, 'teacher_id': params.teacherId})
           .eq('id', params.id);
+      AppLogger.response(_tag, 'updateClass');
     } catch (error) {
+      AppLogger.error(_tag, 'updateClass', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> deleteClass(String id) async {
+    AppLogger.request(_tag, 'deleteClass', {'id': id});
     try {
       await _client.from('classes').delete().eq('id', id);
+      AppLogger.response(_tag, 'deleteClass');
     } catch (error) {
+      AppLogger.error(_tag, 'deleteClass', error);
       throw ServerException(error.toString());
     }
   }
@@ -242,12 +289,18 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
   Future<void> addStudentToClass(
     ({String classId, String studentId}) params,
   ) async {
+    AppLogger.request(_tag, 'addStudentToClass', {
+      'classId': params.classId,
+      'studentId': params.studentId,
+    });
     try {
       await _client.from('class_students').insert({
         'class_id': params.classId,
         'student_id': params.studentId,
       });
+      AppLogger.response(_tag, 'addStudentToClass');
     } catch (error) {
+      AppLogger.error(_tag, 'addStudentToClass', error);
       throw ServerException(error.toString());
     }
   }
@@ -256,19 +309,26 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
   Future<void> removeStudentFromClass(
     ({String classId, String studentId}) params,
   ) async {
+    AppLogger.request(_tag, 'removeStudentFromClass', {
+      'classId': params.classId,
+      'studentId': params.studentId,
+    });
     try {
       await _client
           .from('class_students')
           .delete()
           .eq('class_id', params.classId)
           .eq('student_id', params.studentId);
+      AppLogger.response(_tag, 'removeStudentFromClass');
     } catch (error) {
+      AppLogger.error(_tag, 'removeStudentFromClass', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<AssignmentModel>> getAllAssessments() async {
+    AppLogger.request(_tag, 'getAllAssessments');
     try {
       final rows = await _client
           .from('assignments')
@@ -278,13 +338,16 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
       final assignmentIds = rows.map((row) => row['id'] as String).toList();
       final counts = await _submittedCounts(assignmentIds);
 
-      return rows.map((row) {
+      final result = rows.map((row) {
         return AssignmentModel.fromJson({
           ...row,
           '_submitted_count': counts[row['id']] ?? 0,
         });
       }).toList();
+      AppLogger.response(_tag, 'getAllAssessments', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getAllAssessments', error);
       throw ServerException(error.toString());
     }
   }
@@ -308,6 +371,7 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
 
   @override
   Future<List<TeacherSummaryEntity>> getTeachers() async {
+    AppLogger.request(_tag, 'getTeachers');
     try {
       final teacherRows = await _client
           .from('profiles')
@@ -348,7 +412,7 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
         }
       }
 
-      return teacherRows.map((row) {
+      final result = teacherRows.map((row) {
         final id = row['id'] as String;
         return TeacherSummaryEntity(
           id: id,
@@ -358,13 +422,17 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
           cbtCount: cbtCounts[id] ?? 0,
         );
       }).toList();
+      AppLogger.response(_tag, 'getTeachers', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getTeachers', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<TeacherDetailEntity> getTeacherDetail(String teacherId) async {
+    AppLogger.request(_tag, 'getTeacherDetail', {'teacherId': teacherId});
     try {
       final profileRow = await _client
           .from('profiles')
@@ -393,20 +461,24 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
         }
       }
 
-      return TeacherDetailEntity(
+      final result = TeacherDetailEntity(
         id: profileRow['id'] as String,
         name: profileRow['full_name'] as String? ?? 'Unknown',
         classes: classRows.map(ClassOptionModel.fromJson).toList(),
         assignmentCount: assignmentCount,
         cbtCount: cbtCount,
       );
+      AppLogger.response(_tag, 'getTeacherDetail', result.name);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getTeacherDetail', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<StudentSummaryEntity>> getStudents() async {
+    AppLogger.request(_tag, 'getStudents');
     try {
       final studentRows = await _client
           .from('profiles')
@@ -448,7 +520,7 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
         (scoresByStudent[id] ??= []).add(score.toInt());
       }
 
-      return studentRows.map((row) {
+      final result = studentRows.map((row) {
         final id = row['id'] as String;
         final scores = scoresByStudent[id];
         final average = (scores == null || scores.isEmpty)
@@ -462,13 +534,17 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
           averageScore: average,
         );
       }).toList();
+      AppLogger.response(_tag, 'getStudents', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getStudents', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<StudentDetailEntity> getStudentDetail(String studentId) async {
+    AppLogger.request(_tag, 'getStudentDetail', {'studentId': studentId});
     try {
       final profileRow = await _client
           .from('profiles')
@@ -515,13 +591,16 @@ class AdminRemoteDataSourceImpl implements AdminRemoteDataSource {
         );
       }).toList();
 
-      return StudentDetailEntity(
+      final result = StudentDetailEntity(
         id: profileRow['id'] as String,
         name: profileRow['full_name'] as String? ?? 'Unknown',
         className: className,
         assessments: assessments,
       );
+      AppLogger.response(_tag, 'getStudentDetail', result.assessments);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getStudentDetail', error);
       throw ServerException(error.toString());
     }
   }

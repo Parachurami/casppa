@@ -38,25 +38,21 @@ class SubjectsPage extends ConsumerWidget {
           await ref.read(adminSubjectsProvider.future);
         },
         child: subjectsState.when(
-          loading: () => ShimmerList(
-            itemBuilder: (context, index) => const SkeletonBox(
-              width: double.infinity,
-              height: 64,
-              borderRadius: 14,
-            ),
-          ),
-          error: (error, _) => ListView(
-            children: [
-              const SizedBox(height: 80),
-              AssessmentsEmptyState(
-                icon: Icons.cloud_off_outlined,
-                title: 'Could not load subjects',
-                message: 'Check your connection and try again.',
-                ctaLabel: 'Retry',
-                onPressed: () => ref.invalidate(adminSubjectsProvider),
-              ),
-            ],
-          ),
+          loading: () => _loadingContent,
+          error: (error, _) => subjectsState.isLoading
+              ? _loadingContent
+              : ListView(
+                  children: [
+                    const SizedBox(height: 80),
+                    AssessmentsEmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'Could not load subjects',
+                      message: 'Check your connection and try again.',
+                      ctaLabel: 'Retry',
+                      onPressed: () => ref.invalidate(adminSubjectsProvider),
+                    ),
+                  ],
+                ),
           data: (subjects) {
             if (subjects.isEmpty) {
               return ListView(
@@ -111,6 +107,14 @@ class SubjectsPage extends ConsumerWidget {
       ),
     );
   }
+
+  Widget get _loadingContent => ShimmerList(
+    itemBuilder: (context, index) => const SkeletonBox(
+      width: double.infinity,
+      height: 64,
+      borderRadius: 14,
+    ),
+  );
 }
 
 class _SubjectFormSheet extends ConsumerStatefulWidget {

@@ -3,6 +3,7 @@ import 'package:casppa/app/domain/assignments/entities/assignment_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/class_option_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/question_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/student_assignment_entity.dart';
+import 'package:casppa/app/domain/assignments/entities/student_option_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/student_submission_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/submission_annotation_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/submission_answer_entity.dart';
@@ -37,6 +38,10 @@ abstract class AssignmentsRepository {
   ResultFuture<List<ClassOptionEntity>> getAllClassOptions();
 
   ResultFuture<List<SubjectOptionEntity>> getSubjectOptions();
+
+  /// Students enrolled in [classId] — used by the parent sign-up picker to
+  /// find their child(ren) before the parent has a session.
+  ResultFuture<List<StudentOptionEntity>> getStudentsInClass(String classId);
 
   ResultFuture<List<StudentSubmissionEntity>> getAssignmentSubmissions(
     AssignmentSubmissionsParams params,

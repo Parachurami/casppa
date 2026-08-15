@@ -8,6 +8,7 @@ import 'package:casppa/app/domain/assignments/entities/assignment_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/class_option_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/question_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/student_assignment_entity.dart';
+import 'package:casppa/app/domain/assignments/entities/student_option_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/student_submission_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/submission_annotation_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/submission_answer_entity.dart';
@@ -28,6 +29,7 @@ import 'package:casppa/app/domain/assignments/usecases/get_class_options_usecase
 import 'package:casppa/app/domain/assignments/usecases/get_questions_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_student_assignments_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_student_cbts_usecase.dart';
+import 'package:casppa/app/domain/assignments/usecases/get_students_in_class_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_submission_annotations_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_submission_answers_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_subject_options_usecase.dart';
@@ -87,6 +89,19 @@ final subjectOptionsProvider =
           .call(const NoParams());
 
       return result.fold((failure) => throw failure, (options) => options);
+    });
+
+final getStudentsInClassUseCaseProvider = Provider<GetStudentsInClassUseCase>(
+  (ref) => sl(),
+);
+
+final studentsInClassProvider = FutureProvider.autoDispose
+    .family<List<StudentOptionEntity>, String>((ref, classId) async {
+      final result = await ref
+          .read(getStudentsInClassUseCaseProvider)
+          .call(classId);
+
+      return result.fold((failure) => throw failure, (students) => students);
     });
 
 final getAssignmentSubmissionsUseCaseProvider =

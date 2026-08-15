@@ -1,8 +1,10 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:casppa/app/core/errors/exceptions.dart';
+import 'package:casppa/app/core/utils/app_logger.dart';
 import 'package:casppa/app/data/assignments/models/assignment_model.dart';
 import 'package:casppa/app/data/assignments/models/class_option_model.dart';
+import 'package:casppa/app/data/assignments/models/student_option_model.dart';
 import 'package:casppa/app/data/assignments/models/subject_option_model.dart';
 import 'package:casppa/app/domain/assignments/entities/grade_status.dart';
 import 'package:casppa/app/domain/assignments/entities/question_entity.dart';
@@ -89,6 +91,8 @@ abstract class AssignmentsRemoteDataSource {
 
   Future<List<SubjectOptionModel>> getSubjectOptions();
 
+  Future<List<StudentOptionModel>> getStudentsInClass(String classId);
+
   Future<List<StudentSubmissionEntity>> getAssignmentSubmissions({
     required String assignmentId,
     required String? classId,
@@ -134,6 +138,8 @@ abstract class AssignmentsRemoteDataSource {
 class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
   const AssignmentsRemoteDataSourceImpl(this._client);
 
+  static const _tag = 'AssignmentsRemoteDataSource';
+
   final SupabaseClient _client;
 
   String get _currentUserId {
@@ -146,6 +152,9 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
 
   @override
   Future<List<AssignmentModel>> getTeacherAssignments() async {
+    AppLogger.request(_tag, 'getTeacherAssignments', {
+      'teacherId': _currentUserId,
+    });
     try {
       final rows = await _client
           .from('assignments')
@@ -160,13 +169,16 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
 
       final counts = await _submittedCounts(assignmentIds);
 
-      return rows.map((row) {
+      final result = rows.map((row) {
         return AssignmentModel.fromJson({
           ...row,
           '_submitted_count': counts[row['id']] ?? 0,
         });
       }).toList();
+      AppLogger.response(_tag, 'getTeacherAssignments', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getTeacherAssignments', error);
       throw ServerException(error.toString());
     }
   }
@@ -192,6 +204,7 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
   Future<AssignmentModel> createAssignment(
     CreateAssignmentParams params,
   ) async {
+    AppLogger.request(_tag, 'createAssignment', {'title': params.title});
     try {
       final row = await _client
           .from('assignments')
@@ -204,8 +217,11 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           .select(_assignmentSelect)
           .single();
 
-      return AssignmentModel.fromJson({...row, '_submitted_count': 0});
+      final result = AssignmentModel.fromJson({...row, '_submitted_count': 0});
+      AppLogger.response(_tag, 'createAssignment', result.id);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'createAssignment', error);
       throw ServerException(error.toString());
     }
   }
@@ -215,6 +231,7 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
     String id,
     CreateAssignmentParams params,
   ) async {
+    AppLogger.request(_tag, 'updateAssignment', {'id': id});
     try {
       final row = await _client
           .from('assignments')
@@ -225,20 +242,26 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
 
       final counts = await _submittedCounts([id]);
 
-      return AssignmentModel.fromJson({
+      final result = AssignmentModel.fromJson({
         ...row,
         '_submitted_count': counts[id] ?? 0,
       });
+      AppLogger.response(_tag, 'updateAssignment', result.id);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'updateAssignment', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> deleteAssignment(String id) async {
+    AppLogger.request(_tag, 'deleteAssignment', {'id': id});
     try {
       await _client.from('assignments').delete().eq('id', id);
+      AppLogger.response(_tag, 'deleteAssignment');
     } catch (error) {
+      AppLogger.error(_tag, 'deleteAssignment', error);
       throw ServerException(error.toString());
     }
   }
@@ -259,6 +282,7 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
 
   @override
   Future<List<ClassOptionModel>> getClassOptions() async {
+    AppLogger.request(_tag, 'getClassOptions', {'teacherId': _currentUserId});
     try {
       final rows = await _client
           .from('classes')
@@ -266,30 +290,67 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           .eq('teacher_id', _currentUserId)
           .order('name');
 
-      return rows.map(ClassOptionModel.fromJson).toList();
+      final result = rows.map(ClassOptionModel.fromJson).toList();
+      AppLogger.response(_tag, 'getClassOptions', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getClassOptions', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<ClassOptionModel>> getAllClassOptions() async {
+    AppLogger.request(_tag, 'getAllClassOptions');
     try {
       final rows = await _client.from('classes').select().order('name');
 
-      return rows.map(ClassOptionModel.fromJson).toList();
+      final result = rows.map(ClassOptionModel.fromJson).toList();
+      AppLogger.response(_tag, 'getAllClassOptions', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getAllClassOptions', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<SubjectOptionModel>> getSubjectOptions() async {
+    AppLogger.request(_tag, 'getSubjectOptions');
     try {
       final rows = await _client.from('subjects').select().order('title');
 
-      return rows.map(SubjectOptionModel.fromJson).toList();
+      final result = rows.map(SubjectOptionModel.fromJson).toList();
+      AppLogger.response(_tag, 'getSubjectOptions', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getSubjectOptions', error);
+      throw ServerException(error.toString());
+    }
+  }
+
+  @override
+  Future<List<StudentOptionModel>> getStudentsInClass(String classId) async {
+    AppLogger.request(_tag, 'getStudentsInClass', {'classId': classId});
+    try {
+      final rows = await _client
+          .from('class_students')
+          .select('student_id, profiles!student_id(full_name)')
+          .eq('class_id', classId);
+
+      final students = rows.map((row) {
+        final profile = row['profiles'] as Map<String, dynamic>?;
+        return StudentOptionModel(
+          id: row['student_id'] as String,
+          name: profile?['full_name'] as String? ?? 'Unknown',
+        );
+      }).toList();
+
+      students.sort((a, b) => a.name.compareTo(b.name));
+      AppLogger.response(_tag, 'getStudentsInClass', students);
+      return students;
+    } catch (error) {
+      AppLogger.error(_tag, 'getStudentsInClass', error);
       throw ServerException(error.toString());
     }
   }
@@ -299,7 +360,14 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
     required String assignmentId,
     required String? classId,
   }) async {
-    if (classId == null) return [];
+    AppLogger.request(_tag, 'getAssignmentSubmissions', {
+      'assignmentId': assignmentId,
+      'classId': classId,
+    });
+    if (classId == null) {
+      AppLogger.response(_tag, 'getAssignmentSubmissions', <StudentSubmissionEntity>[]);
+      return [];
+    }
 
     try {
       final enrollments = await _client
@@ -354,14 +422,19 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
       }).toList();
 
       students.sort((a, b) => a.studentName.compareTo(b.studentName));
+      AppLogger.response(_tag, 'getAssignmentSubmissions', students);
       return students;
     } catch (error) {
+      AppLogger.error(_tag, 'getAssignmentSubmissions', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<StudentAssignmentEntity>> getStudentAssignments() async {
+    AppLogger.request(_tag, 'getStudentAssignments', {
+      'studentId': _currentUserId,
+    });
     try {
       final enrollments = await _client
           .from('class_students')
@@ -369,7 +442,10 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           .eq('student_id', _currentUserId)
           .limit(1);
 
-      if (enrollments.isEmpty) return [];
+      if (enrollments.isEmpty) {
+        AppLogger.response(_tag, 'getStudentAssignments', <StudentAssignmentEntity>[]);
+        return [];
+      }
 
       final classId = enrollments.first['class_id'] as String;
 
@@ -398,7 +474,7 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
         for (final row in submissionRows) row['assignment_id'] as String: row,
       };
 
-      return rows.map((row) {
+      final result = rows.map((row) {
         final assignmentId = row['id'] as String;
         final subject = row['subject'] as Map<String, dynamic>?;
         final teacher = row['teacher'] as Map<String, dynamic>?;
@@ -428,13 +504,20 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           generalFeedback: submission?['general_feedback'] as String?,
         );
       }).toList();
+      AppLogger.response(_tag, 'getStudentAssignments', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getStudentAssignments', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> createSubmission(CreateSubmissionParams params) async {
+    AppLogger.request(_tag, 'createSubmission', {
+      'assignmentId': params.assignmentId,
+      'previousSubmissionId': params.previousSubmissionId,
+    });
     try {
       final previousId = params.previousSubmissionId;
 
@@ -448,6 +531,7 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           'body_text': params.bodyText,
           'submitted_at': DateTime.now().toIso8601String(),
         });
+        AppLogger.response(_tag, 'createSubmission', 'new submission');
         return;
       }
 
@@ -481,7 +565,9 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
         'assignment_id': params.assignmentId,
         'is_read': false,
       });
+      AppLogger.response(_tag, 'createSubmission', 'resubmission v$nextVersion');
     } catch (error) {
+      AppLogger.error(_tag, 'createSubmission', error);
       throw ServerException(error.toString());
     }
   }
@@ -490,6 +576,9 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
   Future<List<SubmissionAnnotationEntity>> getSubmissionAnnotations(
     String submissionId,
   ) async {
+    AppLogger.request(_tag, 'getSubmissionAnnotations', {
+      'submissionId': submissionId,
+    });
     try {
       final rows = await _client
           .from('annotations')
@@ -498,8 +587,11 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           .eq('kind', 'pin')
           .order('created_at');
 
-      return rows.map(_annotationFromRow).toList();
+      final result = rows.map(_annotationFromRow).toList();
+      AppLogger.response(_tag, 'getSubmissionAnnotations', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getSubmissionAnnotations', error);
       throw ServerException(error.toString());
     }
   }
@@ -508,6 +600,9 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
   Future<SubmissionAnnotationEntity> addAnnotation(
     AddAnnotationParams params,
   ) async {
+    AppLogger.request(_tag, 'addAnnotation', {
+      'submissionId': params.submissionId,
+    });
     try {
       final row = await _client
           .from('annotations')
@@ -522,8 +617,11 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           .select()
           .single();
 
-      return _annotationFromRow(row);
+      final result = _annotationFromRow(row);
+      AppLogger.response(_tag, 'addAnnotation', result.id);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'addAnnotation', error);
       throw ServerException(error.toString());
     }
   }
@@ -540,27 +638,41 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
 
   @override
   Future<void> updateAnnotationText(String annotationId, String text) async {
+    AppLogger.request(_tag, 'updateAnnotationText', {
+      'annotationId': annotationId,
+    });
     try {
       await _client
           .from('annotations')
           .update({'text': text})
           .eq('id', annotationId);
+      AppLogger.response(_tag, 'updateAnnotationText');
     } catch (error) {
+      AppLogger.error(_tag, 'updateAnnotationText', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> deleteAnnotation(String annotationId) async {
+    AppLogger.request(_tag, 'deleteAnnotation', {
+      'annotationId': annotationId,
+    });
     try {
       await _client.from('annotations').delete().eq('id', annotationId);
+      AppLogger.response(_tag, 'deleteAnnotation');
     } catch (error) {
+      AppLogger.error(_tag, 'deleteAnnotation', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> gradeSubmission(GradeSubmissionParams params) async {
+    AppLogger.request(_tag, 'gradeSubmission', {
+      'submissionId': params.submissionId,
+      'returnToStudent': params.returnToStudent,
+    });
     try {
       final payload = <String, dynamic>{
         'final_score': params.finalScore,
@@ -584,9 +696,10 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
       if (params.returnToStudent) {
         final assignment = row['assignments'] as Map<String, dynamic>?;
         final assignmentTitle = assignment?['title'] as String? ?? 'your assignment';
+        final studentId = row['student_id'] as String;
 
         await _client.from('notifications').insert({
-          'user_id': row['student_id'],
+          'user_id': studentId,
           'type': 'assignment_returned',
           'title': 'Assignment graded',
           'body': 'Your teacher graded and returned "$assignmentTitle".',
@@ -594,14 +707,44 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           'submission_id': params.submissionId,
           'is_read': false,
         });
+
+        final parentRows = await _client
+            .from('parent_student')
+            .select('parent_id')
+            .eq('student_id', studentId);
+
+        if (parentRows.isNotEmpty) {
+          await _client.from('notifications').insert([
+            for (final parentRow in parentRows)
+              {
+                'user_id': parentRow['parent_id'],
+                'type': 'assignment_returned',
+                'title': 'Your child was graded',
+                'body':
+                    'A submission for "$assignmentTitle" was graded and returned.',
+                'assignment_id': row['assignment_id'],
+                'submission_id': params.submissionId,
+                'is_read': false,
+              },
+          ]);
+        }
+        AppLogger.response(
+          _tag,
+          'gradeSubmission',
+          'returned, ${parentRows.length} parent notification(s)',
+        );
+      } else {
+        AppLogger.response(_tag, 'gradeSubmission', 'saved, not returned');
       }
     } catch (error) {
+      AppLogger.error(_tag, 'gradeSubmission', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<AssignmentModel>> getTeacherCbts() async {
+    AppLogger.request(_tag, 'getTeacherCbts', {'teacherId': _currentUserId});
     try {
       final rows = await _client
           .from('assignments')
@@ -613,19 +756,23 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
       final assignmentIds = rows.map((row) => row['id'] as String).toList();
       final counts = await _submittedCounts(assignmentIds);
 
-      return rows.map((row) {
+      final result = rows.map((row) {
         return AssignmentModel.fromJson({
           ...row,
           '_submitted_count': counts[row['id']] ?? 0,
         });
       }).toList();
+      AppLogger.response(_tag, 'getTeacherCbts', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getTeacherCbts', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<List<StudentAssignmentEntity>> getStudentCbts() async {
+    AppLogger.request(_tag, 'getStudentCbts', {'studentId': _currentUserId});
     try {
       final enrollments = await _client
           .from('class_students')
@@ -633,7 +780,10 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           .eq('student_id', _currentUserId)
           .limit(1);
 
-      if (enrollments.isEmpty) return [];
+      if (enrollments.isEmpty) {
+        AppLogger.response(_tag, 'getStudentCbts', <StudentAssignmentEntity>[]);
+        return [];
+      }
 
       final classId = enrollments.first['class_id'] as String;
 
@@ -662,7 +812,7 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
         for (final row in submissionRows) row['assignment_id'] as String: row,
       };
 
-      return rows.map((row) {
+      final result = rows.map((row) {
         final assignmentId = row['id'] as String;
         final subject = row['subject'] as Map<String, dynamic>?;
         final teacher = row['teacher'] as Map<String, dynamic>?;
@@ -691,13 +841,20 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           generalFeedback: submission?['general_feedback'] as String?,
         );
       }).toList();
+      AppLogger.response(_tag, 'getStudentCbts', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getStudentCbts', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<AssignmentModel> createCbt(CreateCbtInput input) async {
+    AppLogger.request(_tag, 'createCbt', {
+      'title': input.data.title,
+      'questionCount': input.questions.length,
+    });
     try {
       final row = await _client
           .from('assignments')
@@ -713,14 +870,21 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
       final assignmentId = row['id'] as String;
       await _syncQuestions(assignmentId, input.questions);
 
-      return AssignmentModel.fromJson({...row, '_submitted_count': 0});
+      final result = AssignmentModel.fromJson({...row, '_submitted_count': 0});
+      AppLogger.response(_tag, 'createCbt', result.id);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'createCbt', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<AssignmentModel> updateCbt(UpdateCbtInput input) async {
+    AppLogger.request(_tag, 'updateCbt', {
+      'id': input.id,
+      'questionCount': input.questions.length,
+    });
     try {
       final row = await _client
           .from('assignments')
@@ -734,11 +898,14 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
 
       final counts = await _submittedCounts([input.id]);
 
-      return AssignmentModel.fromJson({
+      final result = AssignmentModel.fromJson({
         ...row,
         '_submitted_count': counts[input.id] ?? 0,
       });
+      AppLogger.response(_tag, 'updateCbt', result.id);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'updateCbt', error);
       throw ServerException(error.toString());
     }
   }
@@ -781,6 +948,7 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
 
   @override
   Future<List<QuestionEntity>> getQuestions(String assignmentId) async {
+    AppLogger.request(_tag, 'getQuestions', {'assignmentId': assignmentId});
     try {
       final rows = await _client
           .from('questions')
@@ -788,8 +956,11 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           .eq('assignment_id', assignmentId)
           .order('position');
 
-      return rows.map(_questionFromRow).toList();
+      final result = rows.map(_questionFromRow).toList();
+      AppLogger.response(_tag, 'getQuestions', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getQuestions', error);
       throw ServerException(error.toString());
     }
   }
@@ -825,6 +996,10 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
 
   @override
   Future<void> submitCbtAnswers(SubmitCbtParams params) async {
+    AppLogger.request(_tag, 'submitCbtAnswers', {
+      'assignmentId': params.assignmentId,
+      'answerCount': params.answers.length,
+    });
     try {
       final questions = await getQuestions(params.assignmentId);
       final questionsById = {for (final q in questions) q.id: q};
@@ -888,7 +1063,9 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           .from('submissions')
           .update({'auto_score': autoScore})
           .eq('id', submissionId);
+      AppLogger.response(_tag, 'submitCbtAnswers', 'autoScore=$autoScore');
     } catch (error) {
+      AppLogger.error(_tag, 'submitCbtAnswers', error);
       throw ServerException(error.toString());
     }
   }
@@ -897,13 +1074,16 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
   Future<List<SubmissionAnswerEntity>> getSubmissionAnswers(
     String submissionId,
   ) async {
+    AppLogger.request(_tag, 'getSubmissionAnswers', {
+      'submissionId': submissionId,
+    });
     try {
       final rows = await _client
           .from('submission_answers')
           .select()
           .eq('submission_id', submissionId);
 
-      return rows.map((row) {
+      final result = rows.map((row) {
         return SubmissionAnswerEntity(
           id: row['id'] as String,
           questionId: row['question_id'] as String,
@@ -914,13 +1094,17 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
           awardedPoints: (row['awarded_points'] as num?)?.toInt(),
         );
       }).toList();
+      AppLogger.response(_tag, 'getSubmissionAnswers', result);
+      return result;
     } catch (error) {
+      AppLogger.error(_tag, 'getSubmissionAnswers', error);
       throw ServerException(error.toString());
     }
   }
 
   @override
   Future<void> gradeCbtAnswers(List<CbtAnswerGrade> grades) async {
+    AppLogger.request(_tag, 'gradeCbtAnswers', {'count': grades.length});
     try {
       for (final grade in grades) {
         await _client
@@ -931,7 +1115,9 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
             })
             .eq('id', grade.answerId);
       }
+      AppLogger.response(_tag, 'gradeCbtAnswers');
     } catch (error) {
+      AppLogger.error(_tag, 'gradeCbtAnswers', error);
       throw ServerException(error.toString());
     }
   }

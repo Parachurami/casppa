@@ -73,21 +73,21 @@ class _AssessmentsList extends ConsumerWidget {
         await ref.read(allAssessmentsProvider.future);
       },
       child: assessmentsState.when(
-        loading: () => ShimmerList(
-          itemBuilder: (context, index) => const AssignmentCardSkeleton(),
-        ),
-        error: (error, _) => ListView(
-          children: [
-            const SizedBox(height: 80),
-            AssessmentsEmptyState(
-              icon: Icons.cloud_off_outlined,
-              title: 'Could not load assessments',
-              message: 'Check your connection and try again.',
-              ctaLabel: 'Retry',
-              onPressed: () => ref.invalidate(allAssessmentsProvider),
-            ),
-          ],
-        ),
+        loading: () => _loadingContent,
+        error: (error, _) => assessmentsState.isLoading
+            ? _loadingContent
+            : ListView(
+                children: [
+                  const SizedBox(height: 80),
+                  AssessmentsEmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Could not load assessments',
+                    message: 'Check your connection and try again.',
+                    ctaLabel: 'Retry',
+                    onPressed: () => ref.invalidate(allAssessmentsProvider),
+                  ),
+                ],
+              ),
         data: (assessments) {
           final filtered = assessments
               .where((assessment) => _matchesTab(assessment.type))
@@ -126,6 +126,9 @@ class _AssessmentsList extends ConsumerWidget {
       ),
     );
   }
+
+  Widget get _loadingContent =>
+      ShimmerList(itemBuilder: (context, index) => const AssignmentCardSkeleton());
 
   bool _matchesTab(AssignmentType type) {
     switch (tab) {

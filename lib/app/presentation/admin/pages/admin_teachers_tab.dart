@@ -32,25 +32,22 @@ class AdminTeachersTab extends ConsumerWidget {
                   await ref.read(adminTeachersProvider.future);
                 },
                 child: teachersState.when(
-                  loading: () => ShimmerList(
-                    itemBuilder: (context, index) => const SkeletonBox(
-                      width: double.infinity,
-                      height: 76,
-                      borderRadius: 14,
-                    ),
-                  ),
-                  error: (error, _) => ListView(
-                    children: [
-                      const SizedBox(height: 80),
-                      AssessmentsEmptyState(
-                        icon: Icons.cloud_off_outlined,
-                        title: 'Could not load teachers',
-                        message: 'Check your connection and try again.',
-                        ctaLabel: 'Retry',
-                        onPressed: () => ref.invalidate(adminTeachersProvider),
-                      ),
-                    ],
-                  ),
+                  loading: () => _loadingContent,
+                  error: (error, _) => teachersState.isLoading
+                      ? _loadingContent
+                      : ListView(
+                          children: [
+                            const SizedBox(height: 80),
+                            AssessmentsEmptyState(
+                              icon: Icons.cloud_off_outlined,
+                              title: 'Could not load teachers',
+                              message: 'Check your connection and try again.',
+                              ctaLabel: 'Retry',
+                              onPressed: () =>
+                                  ref.invalidate(adminTeachersProvider),
+                            ),
+                          ],
+                        ),
                   data: (teachers) {
                     if (teachers.isEmpty) {
                       return ListView(
@@ -142,4 +139,12 @@ class AdminTeachersTab extends ConsumerWidget {
       ),
     );
   }
+
+  Widget get _loadingContent => ShimmerList(
+    itemBuilder: (context, index) => const SkeletonBox(
+      width: double.infinity,
+      height: 76,
+      borderRadius: 14,
+    ),
+  );
 }

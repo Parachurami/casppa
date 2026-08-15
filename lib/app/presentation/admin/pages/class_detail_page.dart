@@ -90,25 +90,22 @@ class ClassDetailPage extends ConsumerWidget {
           await ref.read(classDetailProvider(classId).future);
         },
         child: detailState.when(
-          loading: () => ShimmerList(
-            itemBuilder: (context, index) => const SkeletonBox(
-              width: double.infinity,
-              height: 64,
-              borderRadius: 14,
-            ),
-          ),
-          error: (error, _) => ListView(
-            children: [
-              const SizedBox(height: 80),
-              AssessmentsEmptyState(
-                icon: Icons.cloud_off_outlined,
-                title: 'Could not load this class',
-                message: 'Check your connection and try again.',
-                ctaLabel: 'Retry',
-                onPressed: () => ref.invalidate(classDetailProvider(classId)),
-              ),
-            ],
-          ),
+          loading: () => _loadingContent,
+          error: (error, _) => detailState.isLoading
+              ? _loadingContent
+              : ListView(
+                  children: [
+                    const SizedBox(height: 80),
+                    AssessmentsEmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'Could not load this class',
+                      message: 'Check your connection and try again.',
+                      ctaLabel: 'Retry',
+                      onPressed: () =>
+                          ref.invalidate(classDetailProvider(classId)),
+                    ),
+                  ],
+                ),
           data: (detail) {
             return ListView(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
@@ -201,6 +198,14 @@ class ClassDetailPage extends ConsumerWidget {
       ),
     );
   }
+
+  Widget get _loadingContent => ShimmerList(
+    itemBuilder: (context, index) => const SkeletonBox(
+      width: double.infinity,
+      height: 64,
+      borderRadius: 14,
+    ),
+  );
 }
 
 class _AddStudentSheet extends ConsumerStatefulWidget {

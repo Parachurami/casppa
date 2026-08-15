@@ -44,25 +44,21 @@ class ClassesPage extends ConsumerWidget {
           await ref.read(adminClassesProvider.future);
         },
         child: classesState.when(
-          loading: () => ShimmerList(
-            itemBuilder: (context, index) => const SkeletonBox(
-              width: double.infinity,
-              height: 76,
-              borderRadius: 14,
-            ),
-          ),
-          error: (error, _) => ListView(
-            children: [
-              const SizedBox(height: 80),
-              AssessmentsEmptyState(
-                icon: Icons.cloud_off_outlined,
-                title: 'Could not load classes',
-                message: 'Check your connection and try again.',
-                ctaLabel: 'Retry',
-                onPressed: () => ref.invalidate(adminClassesProvider),
-              ),
-            ],
-          ),
+          loading: () => _loadingContent,
+          error: (error, _) => classesState.isLoading
+              ? _loadingContent
+              : ListView(
+                  children: [
+                    const SizedBox(height: 80),
+                    AssessmentsEmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'Could not load classes',
+                      message: 'Check your connection and try again.',
+                      ctaLabel: 'Retry',
+                      onPressed: () => ref.invalidate(adminClassesProvider),
+                    ),
+                  ],
+                ),
           data: (classes) {
             if (classes.isEmpty) {
               return ListView(
@@ -140,6 +136,14 @@ class ClassesPage extends ConsumerWidget {
       ),
     );
   }
+
+  Widget get _loadingContent => ShimmerList(
+    itemBuilder: (context, index) => const SkeletonBox(
+      width: double.infinity,
+      height: 76,
+      borderRadius: 14,
+    ),
+  );
 }
 
 class _ClassFormSheet extends ConsumerStatefulWidget {

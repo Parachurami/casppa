@@ -7,27 +7,27 @@ import 'package:casppa/app/core/utils/date_formatting.dart';
 import 'package:casppa/app/core/widgets/skeleton_loader.dart';
 import 'package:casppa/app/core/widgets/status_pill.dart';
 import 'package:casppa/app/core/widgets/tag_pill.dart';
-import 'package:casppa/app/domain/admin/entities/student_summary_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/assignment_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/student_submission_entity.dart';
-import 'package:casppa/app/presentation/admin/provider/admin_provider.dart';
+import 'package:casppa/app/domain/admin/entities/student_summary_entity.dart';
 import 'package:casppa/app/presentation/assignments/widgets/assessments_empty_state.dart';
+import 'package:casppa/app/presentation/parent/provider/parent_provider.dart';
 
-class StudentDetailPage extends ConsumerWidget {
-  const StudentDetailPage({required this.studentId, super.key});
+class ChildDetailPage extends ConsumerWidget {
+  const ChildDetailPage({required this.childId, super.key});
 
-  final String studentId;
+  final String childId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailState = ref.watch(studentDetailProvider(studentId));
+    final detailState = ref.watch(childDetailProvider(childId));
 
     return Scaffold(
-      appBar: AppBar(title: Text(detailState.valueOrNull?.name ?? 'Student')),
+      appBar: AppBar(title: Text(detailState.valueOrNull?.name ?? 'Child')),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(studentDetailProvider(studentId));
-          await ref.read(studentDetailProvider(studentId).future);
+          ref.invalidate(childDetailProvider(childId));
+          await ref.read(childDetailProvider(childId).future);
         },
         child: detailState.when(
           loading: () => _loadingContent,
@@ -38,11 +38,11 @@ class StudentDetailPage extends ConsumerWidget {
                     const SizedBox(height: 80),
                     AssessmentsEmptyState(
                       icon: Icons.cloud_off_outlined,
-                      title: 'Could not load this student',
+                      title: "Could not load your child's report",
                       message: 'Check your connection and try again.',
                       ctaLabel: 'Retry',
                       onPressed: () =>
-                          ref.invalidate(studentDetailProvider(studentId)),
+                          ref.invalidate(childDetailProvider(childId)),
                     ),
                   ],
                 ),

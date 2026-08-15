@@ -72,65 +72,17 @@ class AdminHomeTab extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               overviewState.when(
-                loading: () => ShimmerGroup(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: const [
-                            Expanded(
-                              child: SkeletonBox(
-                                width: double.infinity,
-                                height: 128,
-                                borderRadius: 16,
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: SkeletonBox(
-                                width: double.infinity,
-                                height: 128,
-                                borderRadius: 16,
-                              ),
-                            ),
-                          ],
-                        ),
+                loading: () => _overviewLoadingContent,
+                error: (error, _) => overviewState.isLoading
+                    ? _overviewLoadingContent
+                    : AssessmentsEmptyState(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Could not load overview',
+                        message: 'Check your connection and try again.',
+                        ctaLabel: 'Retry',
+                        onPressed: () =>
+                            ref.invalidate(adminOverviewProvider),
                       ),
-                      const SizedBox(height: 16),
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: const [
-                            Expanded(
-                              child: SkeletonBox(
-                                width: double.infinity,
-                                height: 128,
-                                borderRadius: 16,
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: SkeletonBox(
-                                width: double.infinity,
-                                height: 128,
-                                borderRadius: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                error: (error, _) => AssessmentsEmptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'Could not load overview',
-                  message: 'Check your connection and try again.',
-                  ctaLabel: 'Retry',
-                  onPressed: () => ref.invalidate(adminOverviewProvider),
-                ),
                 data: (overview) => Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -200,4 +152,57 @@ class AdminHomeTab extends ConsumerWidget {
       ),
     );
   }
+
+  Widget get _overviewLoadingContent => ShimmerGroup(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: const [
+              Expanded(
+                child: SkeletonBox(
+                  width: double.infinity,
+                  height: 128,
+                  borderRadius: 16,
+                ),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: SkeletonBox(
+                  width: double.infinity,
+                  height: 128,
+                  borderRadius: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: const [
+              Expanded(
+                child: SkeletonBox(
+                  width: double.infinity,
+                  height: 128,
+                  borderRadius: 16,
+                ),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: SkeletonBox(
+                  width: double.infinity,
+                  height: 128,
+                  borderRadius: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }

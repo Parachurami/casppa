@@ -18,6 +18,8 @@ import 'package:casppa/app/data/notifications/datasources/remote/notifications_r
 import 'package:casppa/app/data/notifications/repositories/notifications_repository_impl.dart';
 import 'package:casppa/app/data/onboarding/datasources/local/onboarding_local_datasource.dart';
 import 'package:casppa/app/data/onboarding/repositories/onboarding_repository_impl.dart';
+import 'package:casppa/app/data/parent/datasources/remote/parent_remote_datasource.dart';
+import 'package:casppa/app/data/parent/repositories/parent_repository_impl.dart';
 import 'package:casppa/app/domain/admin/repositories/admin_repository.dart';
 import 'package:casppa/app/domain/admin/usecases/add_student_to_class_usecase.dart';
 import 'package:casppa/app/domain/admin/usecases/create_class_usecase.dart';
@@ -51,6 +53,7 @@ import 'package:casppa/app/domain/assignments/usecases/get_student_assignments_u
 import 'package:casppa/app/domain/assignments/usecases/get_student_cbts_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_submission_annotations_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_submission_answers_usecase.dart';
+import 'package:casppa/app/domain/assignments/usecases/get_students_in_class_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_subject_options_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_teacher_assignments_usecase.dart';
 import 'package:casppa/app/domain/assignments/usecases/get_teacher_cbts_usecase.dart';
@@ -75,6 +78,9 @@ import 'package:casppa/app/domain/notifications/usecases/watch_new_notifications
 import 'package:casppa/app/domain/onboarding/repositories/onboarding_repository.dart';
 import 'package:casppa/app/domain/onboarding/usecases/complete_onboarding_usecase.dart';
 import 'package:casppa/app/domain/onboarding/usecases/has_completed_onboarding_usecase.dart';
+import 'package:casppa/app/domain/parent/repositories/parent_repository.dart';
+import 'package:casppa/app/domain/parent/usecases/get_child_detail_usecase.dart';
+import 'package:casppa/app/domain/parent/usecases/get_children_usecase.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -85,6 +91,7 @@ Future<void> initDependencies() async {
   _initAssignments();
   _initNotifications();
   _initAdmin();
+  _initParent();
 }
 
 void _initCore() {
@@ -157,6 +164,7 @@ void _initAssignments() {
     ..registerLazySingleton(() => GetClassOptionsUseCase(sl()))
     ..registerLazySingleton(() => GetAllClassOptionsUseCase(sl()))
     ..registerLazySingleton(() => GetSubjectOptionsUseCase(sl()))
+    ..registerLazySingleton(() => GetStudentsInClassUseCase(sl()))
     ..registerLazySingleton(() => GetAssignmentSubmissionsUseCase(sl()))
     ..registerLazySingleton(() => GetStudentAssignmentsUseCase(sl()))
     ..registerLazySingleton(() => CreateSubmissionUseCase(sl()))
@@ -224,4 +232,16 @@ void _initAdmin() {
     ..registerLazySingleton(() => GetTeacherDetailUseCase(sl()))
     ..registerLazySingleton(() => GetStudentsUseCase(sl()))
     ..registerLazySingleton(() => GetStudentDetailUseCase(sl()));
+}
+
+void _initParent() {
+  sl
+    ..registerLazySingleton<ParentRemoteDataSource>(
+      () => ParentRemoteDataSourceImpl(sl()),
+    )
+    ..registerLazySingleton<ParentRepository>(
+      () => ParentRepositoryImpl(sl(), sl()),
+    )
+    ..registerLazySingleton(() => GetChildrenUseCase(sl()))
+    ..registerLazySingleton(() => GetChildDetailUseCase(sl()));
 }
