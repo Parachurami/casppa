@@ -29,7 +29,10 @@ class _FakeAssignmentsNotifier extends TeacherAssignmentsNotifier {
   Future<List<AssignmentEntity>> build() async => _assignments;
 }
 
-AssignmentEntity _sampleAssignment({required DateTime dueDate}) {
+AssignmentEntity _sampleAssignment({
+  required DateTime dueDate,
+  int submittedCount = 2,
+}) {
   return AssignmentEntity(
     id: 'a1',
     type: AssignmentType.assignment,
@@ -42,7 +45,7 @@ AssignmentEntity _sampleAssignment({required DateTime dueDate}) {
     dueDate: dueDate,
     createdBy: 'teacher-1',
     expectedSubmissions: 2,
-    submittedCount: 2,
+    submittedCount: submittedCount,
   );
 }
 
@@ -139,6 +142,7 @@ void main() {
             () => _FakeAssignmentsNotifier([
               _sampleAssignment(
                 dueDate: DateTime.now().add(const Duration(days: 5)),
+                submittedCount: 0,
               ),
             ]),
           ),
@@ -173,6 +177,44 @@ void main() {
     expect(find.text('Delete Assignment'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'tapping the edit icon on a submitted assignment shows a lock toast '
+    'instead of opening the edit sheet',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authNotifierProvider.overrideWith(_FakeAuthNotifier.new),
+            teacherAssignmentsProvider.overrideWith(
+              () => _FakeAssignmentsNotifier([
+                _sampleAssignment(
+                  dueDate: DateTime.now().add(const Duration(days: 5)),
+                  submittedCount: 2,
+                ),
+              ]),
+            ),
+          ],
+          child: const MaterialApp(home: TeacherAssessmentsPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.lock_outline));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Can't edit — students have already submitted."),
+        findsOneWidget,
+      );
+      expect(find.text('Edit Assignment'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 4));
+    },
+  );
 
   testWidgets('tapping the avatar opens the profile page', (
     WidgetTester tester,

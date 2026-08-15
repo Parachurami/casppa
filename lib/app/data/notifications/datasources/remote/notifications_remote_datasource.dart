@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:casppa/app/core/errors/exceptions.dart';
@@ -11,6 +13,11 @@ abstract class NotificationsRemoteDataSource {
   Future<void> markAllAsRead();
 
   Future<void> deleteNotification(String id);
+
+  /// Emits every new notification row inserted for [userId] — e.g. the
+  /// moment a teacher returns a graded submission — for as long as the
+  /// stream is listened to.
+  Stream<NotificationEntity> watchNewNotifications(String userId);
 }
 
 class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource {
@@ -80,5 +87,34 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
     } catch (error) {
       throw ServerException(error.toString());
     }
+  }
+
+  @override
+  Stream<NotificationEntity> watchNewNotifications(String userId) {
+    final controller = StreamController<NotificationEntity>();
+
+    final channel = _client
+        .channel('notifications:$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            if (controller.isClosed) return;
+            controller.add(_fromRow(payload.newRecord));
+          },
+        )
+        .subscribe();
+
+    controller.onCancel = () {
+      unawaited(_client.removeChannel(channel));
+    };
+
+    return controller.stream;
   }
 }

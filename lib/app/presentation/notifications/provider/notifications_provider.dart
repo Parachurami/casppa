@@ -9,6 +9,7 @@ import 'package:casppa/app/domain/notifications/usecases/delete_notification_use
 import 'package:casppa/app/domain/notifications/usecases/get_notifications_usecase.dart';
 import 'package:casppa/app/domain/notifications/usecases/mark_all_notifications_read_usecase.dart';
 import 'package:casppa/app/domain/notifications/usecases/mark_notification_read_usecase.dart';
+import 'package:casppa/app/domain/notifications/usecases/watch_new_notifications_usecase.dart';
 
 final getNotificationsUseCaseProvider = Provider<GetNotificationsUseCase>(
   (ref) => sl(),
@@ -20,6 +21,8 @@ final markAllNotificationsReadUseCaseProvider =
 final deleteNotificationUseCaseProvider = Provider<DeleteNotificationUseCase>(
   (ref) => sl(),
 );
+final watchNewNotificationsUseCaseProvider =
+    Provider<WatchNewNotificationsUseCase>((ref) => sl());
 
 class NotificationsNotifier extends AsyncNotifier<List<NotificationEntity>> {
   @override
@@ -89,3 +92,11 @@ final unreadNotificationsCountProvider = Provider<int>((ref) {
 
   return notifications.where((notification) => !notification.isRead).length;
 });
+
+/// A live feed of newly-inserted notifications for [userId] — e.g. the
+/// instant a teacher returns a graded submission. `autoDispose` tears the
+/// Supabase Realtime channel down once nothing is listening.
+final newNotificationsStreamProvider = StreamProvider.autoDispose
+    .family<NotificationEntity, String>((ref, userId) {
+      return ref.read(watchNewNotificationsUseCaseProvider).call(userId);
+    });

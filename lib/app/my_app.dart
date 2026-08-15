@@ -12,6 +12,7 @@ import 'package:casppa/app/presentation/assignments/pages/student_assessments_pa
 import 'package:casppa/app/presentation/assignments/pages/teacher_assessments_page.dart';
 import 'package:casppa/app/presentation/auth/pages/login_page.dart';
 import 'package:casppa/app/presentation/auth/provider/auth_provider.dart';
+import 'package:casppa/app/presentation/notifications/widgets/realtime_notifications_gate.dart';
 import 'package:casppa/app/presentation/onboarding/pages/onboarding_page.dart';
 import 'package:casppa/app/presentation/onboarding/provider/onboarding_provider.dart';
 
@@ -24,6 +25,7 @@ class MyApp extends StatelessWidget {
       title: 'Casppa',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      
       home: const AppRoot(),
     );
   }
@@ -58,12 +60,14 @@ class _AuthGate extends ConsumerWidget {
       data: (user) {
         if (user == null) return const LoginPage();
 
-        return switch (user.role) {
+        final dashboard = switch (user.role) {
           UserRole.teacher => const TeacherAssessmentsPage(),
           UserRole.student => const StudentAssessmentsPage(),
           UserRole.admin => const AdminShell(),
           UserRole.parent => _RoleComingSoonPage(user: user),
         };
+
+        return RealtimeNotificationsGate(userId: user.id, child: dashboard);
       },
     );
   }

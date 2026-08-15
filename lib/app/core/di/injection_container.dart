@@ -13,6 +13,7 @@ import 'package:casppa/app/data/assignments/repositories/assignments_repository_
 import 'package:casppa/app/data/auth/datasources/local/auth_local_datasource.dart';
 import 'package:casppa/app/data/auth/datasources/remote/auth_remote_datasource.dart';
 import 'package:casppa/app/data/auth/repositories/auth_repository_impl.dart';
+import 'package:casppa/app/data/notifications/datasources/local/notifications_local_datasource.dart';
 import 'package:casppa/app/data/notifications/datasources/remote/notifications_remote_datasource.dart';
 import 'package:casppa/app/data/notifications/repositories/notifications_repository_impl.dart';
 import 'package:casppa/app/data/onboarding/datasources/local/onboarding_local_datasource.dart';
@@ -70,6 +71,7 @@ import 'package:casppa/app/domain/notifications/usecases/delete_notification_use
 import 'package:casppa/app/domain/notifications/usecases/get_notifications_usecase.dart';
 import 'package:casppa/app/domain/notifications/usecases/mark_all_notifications_read_usecase.dart';
 import 'package:casppa/app/domain/notifications/usecases/mark_notification_read_usecase.dart';
+import 'package:casppa/app/domain/notifications/usecases/watch_new_notifications_usecase.dart';
 import 'package:casppa/app/domain/onboarding/repositories/onboarding_repository.dart';
 import 'package:casppa/app/domain/onboarding/usecases/complete_onboarding_usecase.dart';
 import 'package:casppa/app/domain/onboarding/usecases/has_completed_onboarding_usecase.dart';
@@ -175,16 +177,26 @@ void _initAssignments() {
 
 void _initNotifications() {
   sl
+    ..registerLazySingleton<Box<dynamic>>(
+      () => Hive.box<dynamic>(HiveBoxes.notificationsBox),
+      instanceName: HiveBoxes.notificationsBox,
+    )
     ..registerLazySingleton<NotificationsRemoteDataSource>(
       () => NotificationsRemoteDataSourceImpl(sl()),
     )
+    ..registerLazySingleton<NotificationsLocalDataSource>(
+      () => NotificationsLocalDataSourceImpl(
+        sl(instanceName: HiveBoxes.notificationsBox),
+      ),
+    )
     ..registerLazySingleton<NotificationsRepository>(
-      () => NotificationsRepositoryImpl(sl(), sl()),
+      () => NotificationsRepositoryImpl(sl(), sl(), sl()),
     )
     ..registerLazySingleton(() => GetNotificationsUseCase(sl()))
     ..registerLazySingleton(() => MarkNotificationReadUseCase(sl()))
     ..registerLazySingleton(() => MarkAllNotificationsReadUseCase(sl()))
-    ..registerLazySingleton(() => DeleteNotificationUseCase(sl()));
+    ..registerLazySingleton(() => DeleteNotificationUseCase(sl()))
+    ..registerLazySingleton(() => WatchNewNotificationsUseCase(sl()));
 }
 
 void _initAdmin() {

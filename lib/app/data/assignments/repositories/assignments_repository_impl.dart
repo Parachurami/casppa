@@ -3,12 +3,16 @@ import 'package:fpdart/fpdart.dart';
 import 'package:casppa/app/core/errors/exceptions.dart';
 import 'package:casppa/app/core/errors/failures.dart';
 import 'package:casppa/app/core/services/network_info.dart';
+import 'package:casppa/app/core/utils/app_constants.dart';
 import 'package:casppa/app/core/utils/typedefs.dart';
 import 'package:casppa/app/data/assignments/datasources/local/assignments_local_datasource.dart';
 import 'package:casppa/app/data/assignments/datasources/remote/assignments_remote_datasource.dart';
 import 'package:casppa/app/data/assignments/models/assignment_model.dart';
+import 'package:casppa/app/data/assignments/models/class_option_model.dart';
+import 'package:casppa/app/data/assignments/models/subject_option_model.dart';
 import 'package:casppa/app/domain/assignments/entities/assignment_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/class_option_entity.dart';
+import 'package:casppa/app/domain/assignments/entities/grade_status.dart';
 import 'package:casppa/app/domain/assignments/entities/question_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/student_assignment_entity.dart';
 import 'package:casppa/app/domain/assignments/entities/student_submission_entity.dart';
@@ -41,7 +45,8 @@ class AssignmentsRepositoryImpl implements AssignmentsRepository {
     if (await _networkInfo.isConnected) {
       try {
         final assignments = await _remoteDataSource.getTeacherAssignments();
-        await _localDataSource.cacheAssignments(
+        await _localDataSource.cacheList(
+          HiveKeys.cachedAssignments,
           assignments.map(_toCacheJson).toList(),
         );
         return Right(assignments);
@@ -51,7 +56,9 @@ class AssignmentsRepositoryImpl implements AssignmentsRepository {
     }
 
     try {
-      final cached = await _localDataSource.getCachedAssignments();
+      final cached = await _localDataSource.getCachedList(
+        HiveKeys.cachedAssignments,
+      );
       return Right(cached.map(AssignmentModel.fromJson).toList());
     } on CacheException catch (error) {
       return Left(CacheFailure(error.message));
@@ -80,6 +87,57 @@ class AssignmentsRepositoryImpl implements AssignmentsRepository {
           .map((c) => {'name': c.name, 'max_points': c.maxPoints})
           .toList(),
     };
+  }
+
+  DataMap _classOptionToCacheJson(ClassOptionEntity option) {
+    return {'id': option.id, 'name': option.name};
+  }
+
+  DataMap _subjectOptionToCacheJson(SubjectOptionEntity option) {
+    return {'id': option.id, 'title': option.title};
+  }
+
+  DataMap _studentAssignmentToCacheJson(StudentAssignmentEntity assignment) {
+    return {
+      'id': assignment.id,
+      'title': assignment.title,
+      'description': assignment.description,
+      'subject': assignment.subject,
+      'teacher_name': assignment.teacherName,
+      'teacher_id': assignment.teacherId,
+      'due_date': assignment.dueDate?.toIso8601String(),
+      'submission_status': assignment.submissionStatus.name,
+      'submission_id': assignment.submissionId,
+      'body_text': assignment.bodyText,
+      'final_score': assignment.finalScore,
+      'status_label': assignment.statusLabel?.name,
+      'general_feedback': assignment.generalFeedback,
+    };
+  }
+
+  StudentAssignmentEntity _studentAssignmentFromCacheJson(DataMap json) {
+    final rawDueDate = json['due_date'] as String?;
+    final rawStatusLabel = json['status_label'] as String?;
+
+    return StudentAssignmentEntity(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      subject: json['subject'] as String?,
+      teacherName: json['teacher_name'] as String,
+      teacherId: json['teacher_id'] as String,
+      dueDate: rawDueDate == null ? null : DateTime.parse(rawDueDate),
+      submissionStatus: StudentSubmissionStatus.values.byName(
+        json['submission_status'] as String,
+      ),
+      submissionId: json['submission_id'] as String?,
+      bodyText: json['body_text'] as String?,
+      finalScore: (json['final_score'] as num?)?.toInt(),
+      statusLabel: rawStatusLabel == null
+          ? null
+          : GradeStatus.values.byName(rawStatusLabel),
+      generalFeedback: json['general_feedback'] as String?,
+    );
   }
 
   @override
@@ -135,43 +193,76 @@ class AssignmentsRepositoryImpl implements AssignmentsRepository {
 
   @override
   ResultFuture<List<ClassOptionEntity>> getClassOptions() async {
-    if (!await _networkInfo.isConnected) {
-      return const Left(NetworkFailure('No internet connection.'));
+    if (await _networkInfo.isConnected) {
+      try {
+        final options = await _remoteDataSource.getClassOptions();
+        await _localDataSource.cacheList(
+          HiveKeys.cachedClassOptions,
+          options.map(_classOptionToCacheJson).toList(),
+        );
+        return Right(options);
+      } on ServerException catch (error) {
+        return Left(ServerFailure(error.message));
+      }
     }
 
     try {
-      final options = await _remoteDataSource.getClassOptions();
-      return Right(options);
-    } on ServerException catch (error) {
-      return Left(ServerFailure(error.message));
+      final cached = await _localDataSource.getCachedList(
+        HiveKeys.cachedClassOptions,
+      );
+      return Right(cached.map(ClassOptionModel.fromJson).toList());
+    } on CacheException catch (error) {
+      return Left(CacheFailure(error.message));
     }
   }
 
   @override
   ResultFuture<List<ClassOptionEntity>> getAllClassOptions() async {
-    if (!await _networkInfo.isConnected) {
-      return const Left(NetworkFailure('No internet connection.'));
+    if (await _networkInfo.isConnected) {
+      try {
+        final options = await _remoteDataSource.getAllClassOptions();
+        await _localDataSource.cacheList(
+          HiveKeys.cachedAllClassOptions,
+          options.map(_classOptionToCacheJson).toList(),
+        );
+        return Right(options);
+      } on ServerException catch (error) {
+        return Left(ServerFailure(error.message));
+      }
     }
 
     try {
-      final options = await _remoteDataSource.getAllClassOptions();
-      return Right(options);
-    } on ServerException catch (error) {
-      return Left(ServerFailure(error.message));
+      final cached = await _localDataSource.getCachedList(
+        HiveKeys.cachedAllClassOptions,
+      );
+      return Right(cached.map(ClassOptionModel.fromJson).toList());
+    } on CacheException catch (error) {
+      return Left(CacheFailure(error.message));
     }
   }
 
   @override
   ResultFuture<List<SubjectOptionEntity>> getSubjectOptions() async {
-    if (!await _networkInfo.isConnected) {
-      return const Left(NetworkFailure('No internet connection.'));
+    if (await _networkInfo.isConnected) {
+      try {
+        final options = await _remoteDataSource.getSubjectOptions();
+        await _localDataSource.cacheList(
+          HiveKeys.cachedSubjectOptions,
+          options.map(_subjectOptionToCacheJson).toList(),
+        );
+        return Right(options);
+      } on ServerException catch (error) {
+        return Left(ServerFailure(error.message));
+      }
     }
 
     try {
-      final options = await _remoteDataSource.getSubjectOptions();
-      return Right(options);
-    } on ServerException catch (error) {
-      return Left(ServerFailure(error.message));
+      final cached = await _localDataSource.getCachedList(
+        HiveKeys.cachedSubjectOptions,
+      );
+      return Right(cached.map(SubjectOptionModel.fromJson).toList());
+    } on CacheException catch (error) {
+      return Left(CacheFailure(error.message));
     }
   }
 
@@ -196,15 +287,26 @@ class AssignmentsRepositoryImpl implements AssignmentsRepository {
 
   @override
   ResultFuture<List<StudentAssignmentEntity>> getStudentAssignments() async {
-    if (!await _networkInfo.isConnected) {
-      return const Left(NetworkFailure('No internet connection.'));
+    if (await _networkInfo.isConnected) {
+      try {
+        final assignments = await _remoteDataSource.getStudentAssignments();
+        await _localDataSource.cacheList(
+          HiveKeys.cachedStudentAssignments,
+          assignments.map(_studentAssignmentToCacheJson).toList(),
+        );
+        return Right(assignments);
+      } on ServerException catch (error) {
+        return Left(ServerFailure(error.message));
+      }
     }
 
     try {
-      final assignments = await _remoteDataSource.getStudentAssignments();
-      return Right(assignments);
-    } on ServerException catch (error) {
-      return Left(ServerFailure(error.message));
+      final cached = await _localDataSource.getCachedList(
+        HiveKeys.cachedStudentAssignments,
+      );
+      return Right(cached.map(_studentAssignmentFromCacheJson).toList());
+    } on CacheException catch (error) {
+      return Left(CacheFailure(error.message));
     }
   }
 
@@ -300,29 +402,51 @@ class AssignmentsRepositoryImpl implements AssignmentsRepository {
 
   @override
   ResultFuture<List<AssignmentEntity>> getTeacherCbts() async {
-    if (!await _networkInfo.isConnected) {
-      return const Left(NetworkFailure('No internet connection.'));
+    if (await _networkInfo.isConnected) {
+      try {
+        final cbts = await _remoteDataSource.getTeacherCbts();
+        await _localDataSource.cacheList(
+          HiveKeys.cachedTeacherCbts,
+          cbts.map(_toCacheJson).toList(),
+        );
+        return Right(cbts);
+      } on ServerException catch (error) {
+        return Left(ServerFailure(error.message));
+      }
     }
 
     try {
-      final cbts = await _remoteDataSource.getTeacherCbts();
-      return Right(cbts);
-    } on ServerException catch (error) {
-      return Left(ServerFailure(error.message));
+      final cached = await _localDataSource.getCachedList(
+        HiveKeys.cachedTeacherCbts,
+      );
+      return Right(cached.map(AssignmentModel.fromJson).toList());
+    } on CacheException catch (error) {
+      return Left(CacheFailure(error.message));
     }
   }
 
   @override
   ResultFuture<List<StudentAssignmentEntity>> getStudentCbts() async {
-    if (!await _networkInfo.isConnected) {
-      return const Left(NetworkFailure('No internet connection.'));
+    if (await _networkInfo.isConnected) {
+      try {
+        final cbts = await _remoteDataSource.getStudentCbts();
+        await _localDataSource.cacheList(
+          HiveKeys.cachedStudentCbts,
+          cbts.map(_studentAssignmentToCacheJson).toList(),
+        );
+        return Right(cbts);
+      } on ServerException catch (error) {
+        return Left(ServerFailure(error.message));
+      }
     }
 
     try {
-      final cbts = await _remoteDataSource.getStudentCbts();
-      return Right(cbts);
-    } on ServerException catch (error) {
-      return Left(ServerFailure(error.message));
+      final cached = await _localDataSource.getCachedList(
+        HiveKeys.cachedStudentCbts,
+      );
+      return Right(cached.map(_studentAssignmentFromCacheJson).toList());
+    } on CacheException catch (error) {
+      return Left(CacheFailure(error.message));
     }
   }
 

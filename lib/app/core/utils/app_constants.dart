@@ -12,6 +12,7 @@ class HiveBoxes {
   static const String authBox = 'auth_box';
   static const String onboardingBox = 'onboarding_box';
   static const String assignmentsBox = 'assignments_box';
+  static const String notificationsBox = 'notifications_box';
 }
 
 class HiveKeys {
@@ -20,4 +21,11 @@ class HiveKeys {
   static const String cachedUser = 'CACHED_USER';
   static const String hasCompletedOnboarding = 'HAS_COMPLETED_ONBOARDING';
   static const String cachedAssignments = 'CACHED_ASSIGNMENTS';
+  static const String cachedClassOptions = 'CACHED_CLASS_OPTIONS';
+  static const String cachedAllClassOptions = 'CACHED_ALL_CLASS_OPTIONS';
+  static const String cachedSubjectOptions = 'CACHED_SUBJECT_OPTIONS';
+  static const String cachedStudentAssignments = 'CACHED_STUDENT_ASSIGNMENTS';
+  static const String cachedTeacherCbts = 'CACHED_TEACHER_CBTS';
+  static const String cachedStudentCbts = 'CACHED_STUDENT_CBTS';
+  static const String cachedNotifications = 'CACHED_NOTIFICATIONS';
 }

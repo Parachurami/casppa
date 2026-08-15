@@ -9,4 +9,6 @@ abstract class NotificationsRepository {
   ResultVoid markAllAsRead();
 
   ResultVoid deleteNotification(String id);
+
+  Stream<NotificationEntity> watchNewNotifications(String userId);
 }

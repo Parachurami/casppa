@@ -168,10 +168,8 @@ class _SubmitAssignmentDialogState
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.secondary,
                   ),
-                  onPressed: () => AppToast.info(
-                    context,
-                    'Downloading is simulated in this build.',
-                  ),
+                  onPressed: () =>
+                      AppToast.info(context, 'Feature coming soon.'),
                   icon: const Icon(Icons.download_outlined),
                   label: const Text('Download Assignment'),
                 ),

@@ -513,10 +513,7 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                 InkWell(
                   borderRadius: BorderRadius.circular(14),
                   onTap: () {
-                    AppToast.info(
-                      context,
-                      'File attachments are simulated in this build.',
-                    );
+                    AppToast.info(context, 'Feature coming soon.');
                   },
                   child: Container(
                     width: double.infinity,
@@ -538,7 +535,7 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Attach files (simulated)',
+                          'Attach files (coming soon)',
                           style: AppTextStyles.body.copyWith(
                             color: AppColors.textSecondary,
                           ),
