@@ -179,8 +179,8 @@ void main() {
   });
 
   testWidgets(
-    'tapping the edit icon on a submitted assignment shows a lock toast '
-    'instead of opening the edit sheet',
+    'tapping the edit icon on a submitted assignment opens a locked sheet '
+    'with fields disabled but delete still available',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -206,13 +206,24 @@ void main() {
       await tester.tap(find.byIcon(Icons.lock_outline));
       await tester.pumpAndSettle();
 
+      expect(find.text('Edit Assignment'), findsOneWidget);
       expect(
-        find.text("Can't edit — students have already submitted."),
+        find.textContaining("Students have already submitted"),
         findsOneWidget,
       );
-      expect(find.text('Edit Assignment'), findsNothing);
+      expect(find.text('Save Changes'), findsNothing);
 
-      await tester.pump(const Duration(seconds: 4));
+      final titleField = tester.widget<TextFormField>(
+        find.widgetWithText(TextFormField, 'e.g. Algebra Practice Set 4'),
+      );
+      expect(titleField.enabled, isFalse);
+
+      await tester.dragUntilVisible(
+        find.text('Delete Assignment'),
+        find.byType(ListView).last,
+        const Offset(0, -200),
+      );
+      expect(find.text('Delete Assignment'), findsOneWidget);
     },
   );
 

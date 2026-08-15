@@ -53,6 +53,11 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
 
   bool get _isEditing => widget.assignment != null;
 
+  /// Once students have submitted, details can't change — but the
+  /// assignment (and its submissions) can still be deleted.
+  bool get _isLocked =>
+      _isEditing && widget.assignment!.submittedCount > 0;
+
   @override
   void initState() {
     super.initState();
@@ -242,12 +247,32 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                   _isEditing ? 'Edit Assignment' : 'Create Assignment',
                   style: AppTextStyles.heading,
                 ),
+                if (_isLocked) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusOverdueBackground,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      "Students have already submitted, so details can't be "
+                      'edited. You can still delete this assignment — that '
+                      'will also delete all of its submissions.',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 Text('Title', style: AppTextStyles.title),
                 const SizedBox(height: 8),
                 AppTextField(
                   controller: _titleController,
                   label: 'e.g. Algebra Practice Set 4',
+                  enabled: !_isLocked,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Enter a title.';
@@ -304,8 +329,10 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (value) =>
-                                    setState(() => _selectedClass = value),
+                                onChanged: _isLocked
+                                    ? null
+                                    : (value) =>
+                                          setState(() => _selectedClass = value),
                               );
                             },
                           ),
@@ -358,8 +385,11 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (value) =>
-                                    setState(() => _selectedSubject = value),
+                                onChanged: _isLocked
+                                    ? null
+                                    : (value) => setState(
+                                        () => _selectedSubject = value,
+                                      ),
                               );
                             },
                           ),
@@ -377,6 +407,7 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                 AppTextField(
                   controller: _descriptionController,
                   label: 'What students need to do...',
+                  enabled: !_isLocked,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Enter a description.';
@@ -388,7 +419,7 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                 Text('Due Date', style: AppTextStyles.title),
                 const SizedBox(height: 8),
                 InkWell(
-                  onTap: _pickDueDate,
+                  onTap: _isLocked ? null : _pickDueDate,
                   borderRadius: BorderRadius.circular(14),
                   child: InputDecorator(
                     decoration: const InputDecoration(),
@@ -421,6 +452,7 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                   controller: _expectedSubmissionsController,
                   label: 'e.g. 30',
                   keyboardType: TextInputType.number,
+                  enabled: !_isLocked,
                   validator: (value) {
                     final parsed = int.tryParse(value ?? '');
                     if (parsed == null || parsed <= 0) {
@@ -449,11 +481,12 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                         ),
                       ],
                     ),
-                    TextButton.icon(
-                      onPressed: _addCriterion,
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add Criterion'),
-                    ),
+                    if (!_isLocked)
+                      TextButton.icon(
+                        onPressed: _addCriterion,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add Criterion'),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -486,6 +519,7 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                               child: AppTextField(
                                 controller: criterion.nameController,
                                 label: 'Criterion name',
+                                enabled: !_isLocked,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -495,62 +529,68 @@ class _AssignmentFormSheetState extends ConsumerState<AssignmentFormSheet> {
                                 controller: criterion.pointsController,
                                 label: 'Points',
                                 keyboardType: TextInputType.number,
+                                enabled: !_isLocked,
                               ),
                             ),
-                            IconButton(
-                              onPressed: () => _removeCriterion(index),
-                              icon: const Icon(
-                                Icons.close,
-                                color: AppColors.textSecondary,
+                            if (!_isLocked)
+                              IconButton(
+                                onPressed: () => _removeCriterion(index),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       );
                     }),
                   ),
-                const SizedBox(height: 12),
-                InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () {
-                    AppToast.info(context, 'Feature coming soon.');
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: AppColors.border,
-                        style: BorderStyle.solid,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.attach_file,
-                          size: 18,
-                          color: AppColors.textSecondary,
+                if (!_isLocked) ...[
+                  const SizedBox(height: 12),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      AppToast.info(context, 'Feature coming soon.');
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: AppColors.border,
+                          style: BorderStyle.solid,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Attach files (coming soon)',
-                          style: AppTextStyles.body.copyWith(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.attach_file,
+                            size: 18,
                             color: AppColors.textSecondary,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            'Attach files (coming soon)',
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 24),
-                PrimaryButton(
-                  label: _isEditing ? 'Save Changes' : 'Post Assignment',
-                  isLoading: _isSubmitting,
-                  onPressed: _submit,
-                ),
-                const SizedBox(height: 12),
+                if (!_isLocked) ...[
+                  PrimaryButton(
+                    label: _isEditing ? 'Save Changes' : 'Post Assignment',
+                    isLoading: _isSubmitting,
+                    onPressed: _submit,
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (_isEditing)
                   SizedBox(
                     width: double.infinity,

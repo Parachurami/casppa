@@ -31,7 +31,7 @@ Features: `auth`, `assignments` (assignments + CBT + submissions + annotations),
 
 ## User roles
 
-- **Teacher** — creates assignments/CBTs, marks submissions with inline pen/highlighter/comment-pin annotations (images) or sidebar comments (PDFs), assigns a score + status (Excellent / Satisfactory / Needs Revision) + feedback, then Saves & Grades or Returns to the student. Editing is locked once a test/assignment has submissions.
+- **Teacher** — creates assignments/CBTs, marks submissions with inline pen/highlighter/comment-pin annotations (images) or sidebar comments (PDFs), assigns a score + status (Excellent / Satisfactory / Needs Revision) + feedback, then Saves & Grades or Returns to the student. Editing is locked once a test/assignment has submissions, but it can still be deleted — which also deletes all of its submissions.
 - **Student** — submits text/image/PDF work or answers CBT questions (MCQ / True-False auto-graded instantly; short-answer held as pending until marked). Sees live feedback and can always resubmit returned work (the resubmit form pre-populates the previous answer; resubmission replaces the prior submission for re-marking).
 - **Parent** — signs up by linking one or more children, sees a per-child summary (including an average score normalized to a 0–100% scale) on a single dashboard with no bottom navigation, and can drill into a full report for just that child. Receives real-time notifications the moment any linked child is graded.
 - **Admin** — floating bottom-nav shell (Home / Assessments / Students / Teachers). Home shows a school-wide overview (subject/class/student/teacher counts) plus Subjects/Classes CRUD. Assessments, Students, and Teachers tabs are read-only oversight across every teacher's work.
@@ -50,7 +50,7 @@ Features: `auth`, `assignments` (assignments + CBT + submissions + annotations),
    flutter pub get
    ```
 2. Supabase project config lives in `lib/app/core/utils/app_constants.dart` (URL + publishable/anon key already set for the submission project).
-3. Apply the SQL migrations in `supabase/sql/` **in numeric order** (0001 → 0012) via the Supabase SQL editor — they're idempotent and safe to re-run.
+3. Apply the SQL migrations in `supabase/sql/` **in numeric order** (0001 → 0013) via the Supabase SQL editor — they're idempotent and safe to re-run.
 4. Run the app:
    ```
    flutter run

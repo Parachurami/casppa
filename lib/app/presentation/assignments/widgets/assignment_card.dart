@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:casppa/app/core/theme/app_colors.dart';
 import 'package:casppa/app/core/theme/app_text_styles.dart';
 import 'package:casppa/app/core/utils/date_formatting.dart';
-import 'package:casppa/app/core/widgets/app_toast.dart';
 import 'package:casppa/app/core/widgets/status_pill.dart';
 import 'package:casppa/app/core/widgets/tag_pill.dart';
 import 'package:casppa/app/domain/assignments/entities/assignment_entity.dart';
@@ -21,9 +20,10 @@ class AssignmentCard extends StatelessWidget {
   /// Tapping the card body opens the assessment details / submissions page.
   final VoidCallback? onTap;
 
-  /// The edit icon opens the edit/delete bottom sheet — locked once
-  /// students have already submitted, so questions/details can't shift
-  /// under work that's already been turned in.
+  /// The edit icon opens the edit/delete bottom sheet. Once students have
+  /// already submitted, the sheet itself locks the editable fields (so
+  /// questions/details can't shift under work that's already been turned
+  /// in) but still allows deleting — which also deletes those submissions.
   final VoidCallback? onEdit;
 
   bool get _hasSubmissions => assignment.submittedCount > 0;
@@ -66,16 +66,7 @@ class AssignmentCard extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      onPressed: () {
-                        if (_hasSubmissions) {
-                          AppToast.info(
-                            context,
-                            "Can't edit — students have already submitted.",
-                          );
-                          return;
-                        }
-                        onEdit?.call();
-                      },
+                      onPressed: onEdit,
                       icon: Icon(
                         _hasSubmissions
                             ? Icons.lock_outline

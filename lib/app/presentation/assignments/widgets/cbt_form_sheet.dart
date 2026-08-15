@@ -79,6 +79,11 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
 
   bool get _isEditing => widget.assignment != null;
 
+  /// Once students have submitted, details/questions can't change — but the
+  /// CBT (and its submissions) can still be deleted.
+  bool get _isLocked =>
+      _isEditing && widget.assignment!.submittedCount > 0;
+
   @override
   void initState() {
     super.initState();
@@ -395,12 +400,32 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                   _isEditing ? 'Edit CBT' : 'Create CBT',
                   style: AppTextStyles.heading,
                 ),
+                if (_isLocked) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusOverdueBackground,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      "Students have already submitted, so details and "
+                      "questions can't be edited. You can still delete this "
+                      'CBT — that will also delete all of its submissions.',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 Text('Title', style: AppTextStyles.title),
                 const SizedBox(height: 8),
                 AppTextField(
                   controller: _titleController,
                   label: 'e.g. Mid-Term Chemistry Quiz',
+                  enabled: !_isLocked,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Enter a title.';
@@ -457,8 +482,10 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (value) =>
-                                    setState(() => _selectedClass = value),
+                                onChanged: _isLocked
+                                    ? null
+                                    : (value) =>
+                                          setState(() => _selectedClass = value),
                               );
                             },
                           ),
@@ -511,8 +538,11 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (value) =>
-                                    setState(() => _selectedSubject = value),
+                                onChanged: _isLocked
+                                    ? null
+                                    : (value) => setState(
+                                        () => _selectedSubject = value,
+                                      ),
                               );
                             },
                           ),
@@ -527,6 +557,7 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                 AppTextField(
                   controller: _descriptionController,
                   label: 'What students should know before starting...',
+                  enabled: !_isLocked,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Enter instructions.';
@@ -538,7 +569,7 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                 Text('Due Date', style: AppTextStyles.title),
                 const SizedBox(height: 8),
                 InkWell(
-                  onTap: _pickDueDate,
+                  onTap: _isLocked ? null : _pickDueDate,
                   borderRadius: BorderRadius.circular(14),
                   child: InputDecorator(
                     decoration: const InputDecoration(),
@@ -571,6 +602,7 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                   controller: _expectedSubmissionsController,
                   label: 'e.g. 30',
                   keyboardType: TextInputType.number,
+                  enabled: !_isLocked,
                   validator: (value) {
                     final parsed = int.tryParse(value ?? '');
                     if (parsed == null || parsed <= 0) {
@@ -587,11 +619,12 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                   runSpacing: 8,
                   children: [
                     Text('Questions', style: AppTextStyles.title),
-                    TextButton.icon(
-                      onPressed: _addQuestion,
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add Question'),
-                    ),
+                    if (!_isLocked)
+                      TextButton.icon(
+                        onPressed: _addQuestion,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add Question'),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -601,7 +634,8 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                     child: _QuestionCard(
                       index: i,
                       question: _questions[i],
-                      canRemove: _questions.length > 1,
+                      canRemove: _questions.length > 1 && !_isLocked,
+                      locked: _isLocked,
                       onRemove: () => _removeQuestion(i),
                       onTypeChanged: (type) =>
                           _changeQuestionType(_questions[i], type),
@@ -616,12 +650,14 @@ class _CbtFormSheetState extends ConsumerState<CbtFormSheet> {
                     ),
                   ),
                 const SizedBox(height: 12),
-                PrimaryButton(
-                  label: _isEditing ? 'Save Changes' : 'Post CBT',
-                  isLoading: _isSubmitting,
-                  onPressed: _submit,
-                ),
-                const SizedBox(height: 12),
+                if (!_isLocked) ...[
+                  PrimaryButton(
+                    label: _isEditing ? 'Save Changes' : 'Post CBT',
+                    isLoading: _isSubmitting,
+                    onPressed: _submit,
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (_isEditing)
                   SizedBox(
                     width: double.infinity,
@@ -683,11 +719,13 @@ class _QuestionCard extends StatelessWidget {
     required this.onRemoveOption,
     required this.onCorrectOptionChanged,
     required this.onCorrectBoolChanged,
+    this.locked = false,
   });
 
   final int index;
   final _QuestionForm question;
   final bool canRemove;
+  final bool locked;
   final VoidCallback onRemove;
   final ValueChanged<QuestionType> onTypeChanged;
   final VoidCallback onAddOption;
@@ -738,7 +776,7 @@ class _QuestionCard extends StatelessWidget {
               return ChoiceChip(
                 label: Text(_typeLabels[type]!),
                 selected: isSelected,
-                onSelected: (_) => onTypeChanged(type),
+                onSelected: locked ? null : (_) => onTypeChanged(type),
                 selectedColor: AppColors.primary,
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : AppColors.textPrimary,
@@ -755,6 +793,7 @@ class _QuestionCard extends StatelessWidget {
           AppTextField(
             controller: question.promptController,
             label: 'Question prompt',
+            enabled: !locked,
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -763,6 +802,7 @@ class _QuestionCard extends StatelessWidget {
               controller: question.pointsController,
               label: 'Points',
               keyboardType: TextInputType.number,
+              enabled: !locked,
             ),
           ),
           const SizedBox(height: 12),
@@ -773,7 +813,7 @@ class _QuestionCard extends StatelessWidget {
                 child: Row(
                   children: [
                     InkWell(
-                      onTap: () => onCorrectOptionChanged(i),
+                      onTap: locked ? null : () => onCorrectOptionChanged(i),
                       borderRadius: BorderRadius.circular(20),
                       child: Padding(
                         padding: const EdgeInsets.all(8),
@@ -791,9 +831,10 @@ class _QuestionCard extends StatelessWidget {
                       child: AppTextField(
                         controller: question.options[i].controller,
                         label: 'Option ${i + 1}',
+                        enabled: !locked,
                       ),
                     ),
-                    if (question.options.length > 2)
+                    if (question.options.length > 2 && !locked)
                       IconButton(
                         onPressed: () => onRemoveOption(i),
                         icon: const Icon(
@@ -805,11 +846,12 @@ class _QuestionCard extends StatelessWidget {
                   ],
                 ),
               ),
-            TextButton.icon(
-              onPressed: onAddOption,
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Option'),
-            ),
+            if (!locked)
+              TextButton.icon(
+                onPressed: onAddOption,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Option'),
+              ),
             Text(
               'Select the radio next to the correct option.',
               style: AppTextStyles.caption.copyWith(
@@ -825,7 +867,7 @@ class _QuestionCard extends StatelessWidget {
                   child: _ToggleOption(
                     label: 'True',
                     isSelected: question.correctBool,
-                    onTap: () => onCorrectBoolChanged(true),
+                    onTap: locked ? null : () => onCorrectBoolChanged(true),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -833,7 +875,7 @@ class _QuestionCard extends StatelessWidget {
                   child: _ToggleOption(
                     label: 'False',
                     isSelected: !question.correctBool,
-                    onTap: () => onCorrectBoolChanged(false),
+                    onTap: locked ? null : () => onCorrectBoolChanged(false),
                   ),
                 ),
               ],
@@ -843,6 +885,7 @@ class _QuestionCard extends StatelessWidget {
               controller: question.modelAnswerController,
               label: 'Model answer (optional, for grading reference)',
               maxLines: 3,
+              enabled: !locked,
             ),
             const SizedBox(height: 4),
             Text(
@@ -867,7 +910,7 @@ class _ToggleOption extends StatelessWidget {
 
   final String label;
   final bool isSelected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

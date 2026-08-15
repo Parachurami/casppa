@@ -258,8 +258,56 @@ class AssignmentsRemoteDataSourceImpl implements AssignmentsRemoteDataSource {
   Future<void> deleteAssignment(String id) async {
     AppLogger.request(_tag, 'deleteAssignment', {'id': id});
     try {
+      // Explicitly cascade the delete — teachers can delete an assignment
+      // or CBT even once students have submitted, and that must take every
+      // submission (and its answers/annotations) with it, regardless of
+      // whether the DB foreign keys are configured with ON DELETE CASCADE.
+      final submissionRows = await _client
+          .from('submissions')
+          .select('id')
+          .eq('assignment_id', id);
+      final submissionIds = submissionRows
+          .map((row) => row['id'] as String)
+          .toList();
+
+      if (submissionIds.isNotEmpty) {
+        await _client
+            .from('submission_answers')
+            .delete()
+            .inFilter('submission_id', submissionIds);
+        await _client
+            .from('annotations')
+            .delete()
+            .inFilter('submission_id', submissionIds);
+        await _client
+            .from('submissions')
+            .delete()
+            .inFilter('id', submissionIds);
+      }
+
+      final questionRows = await _client
+          .from('questions')
+          .select('id')
+          .eq('assignment_id', id);
+      final questionIds = questionRows
+          .map((row) => row['id'] as String)
+          .toList();
+
+      if (questionIds.isNotEmpty) {
+        await _client
+            .from('question_options')
+            .delete()
+            .inFilter('question_id', questionIds);
+        await _client.from('questions').delete().eq('assignment_id', id);
+      }
+
       await _client.from('assignments').delete().eq('id', id);
-      AppLogger.response(_tag, 'deleteAssignment');
+      AppLogger.response(
+        _tag,
+        'deleteAssignment',
+        'deleted ${submissionIds.length} submission(s), '
+            '${questionIds.length} question(s)',
+      );
     } catch (error) {
       AppLogger.error(_tag, 'deleteAssignment', error);
       throw ServerException(error.toString());

@@ -9,6 +9,7 @@ class AppTextField extends StatefulWidget {
     this.textInputAction,
     this.validator,
     this.maxLines = 1,
+    this.enabled = true,
     super.key,
   });
 
@@ -19,6 +20,7 @@ class AppTextField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final String? Function(String?)? validator;
   final int maxLines;
+  final bool enabled;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -36,6 +38,7 @@ class _AppTextFieldState extends State<AppTextField> {
       textInputAction: widget.textInputAction,
       validator: widget.validator,
       maxLines: widget.obscureText ? 1 : widget.maxLines,
+      enabled: widget.enabled,
       decoration: InputDecoration(
         labelText: widget.label,
         suffixIcon: widget.obscureText
