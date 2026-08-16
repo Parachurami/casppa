@@ -27,6 +27,14 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthLocalDataSource _localDataSource;
   final NetworkInfo _networkInfo;
 
+  Future<void> _cacheUser(UserModel user, String operation) async {
+    try {
+      await _localDataSource.cacheUser(user);
+    } on CacheException catch (error) {
+      AppLogger.error(_tag, '$operation cache write', error.message);
+    }
+  }
+
   @override
   ResultFuture<UserEntity> login(AuthLoginParams params) async {
     if (!await _networkInfo.isConnected) {
@@ -38,7 +46,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final user = await _remoteDataSource.login(params);
       AppLogger.state(_tag, 'login: succeeded, caching user ${user.id}');
-      await _localDataSource.cacheUser(user);
+      await _cacheUser(user, 'login');
       return Right(user);
     } on AppAuthException catch (error) {
       AppLogger.error(_tag, 'login', error);
@@ -61,7 +69,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = await _remoteDataSource.signUp(params);
       if (user != null) {
         AppLogger.state(_tag, 'signUp: succeeded, caching user ${user.id}');
-        await _localDataSource.cacheUser(user);
+        await _cacheUser(user, 'signUp');
       } else {
         AppLogger.state(_tag, 'signUp: succeeded, no session yet (email confirmation pending)');
       }
@@ -103,7 +111,7 @@ class AuthRepositoryImpl implements AuthRepository {
         final user = await _remoteDataSource.getCurrentUser();
         if (user != null) {
           AppLogger.state(_tag, 'getCurrentUser: remote hit, caching ${user.id}');
-          await _localDataSource.cacheUser(user);
+          await _cacheUser(user, 'getCurrentUser');
         } else {
           AppLogger.state(_tag, 'getCurrentUser: no remote session');
         }
@@ -135,7 +143,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final user = await _remoteDataSource.updateProfile(params);
       AppLogger.state(_tag, 'updateProfile: succeeded, caching user ${user.id}');
-      await _localDataSource.cacheUser(user);
+      await _cacheUser(user, 'updateProfile');
       return Right(user);
     } on AppAuthException catch (error) {
       AppLogger.error(_tag, 'updateProfile', error);

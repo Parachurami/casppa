@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:casppa/app/core/theme/app_colors.dart';
 import 'package:casppa/app/core/widgets/primary_button.dart';
-import 'package:casppa/app/presentation/auth/pages/login_page.dart';
 import 'package:casppa/app/presentation/onboarding/provider/onboarding_provider.dart';
 import 'package:casppa/app/presentation/onboarding/widgets/onboarding_slide.dart';
 
@@ -47,10 +46,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Future<void> _finish() async {
     await ref.read(onboardingNotifierProvider.notifier).complete();
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute<void>(builder: (_) => const LoginPage()));
   }
 
   void _next() {
